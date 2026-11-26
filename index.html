@@ -173,8 +173,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     // Replace these two values with your Supabase Project URL and Publishable API key
-    const SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_YOUR_KEY_HERE";
+   const SUPABASE_URL = "https://tjzwrqwyyokrnceoqvau.supabase.co";
+   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_IbaR-DQ23P8myIDPxEE0Qw_8EC_toie";
 
     const NUM_ROWS = 6;
     const NUM_COLS = 14;
@@ -262,11 +262,10 @@
         roomStatus.classList.remove("connected");
         return;
       }
-
       if (
-        SUPABASE_URL.includes("https://tjzwrqwyyokrnceoqvau.supabase.co") ||
-        SUPABASE_PUBLISHABLE_KEY.includes("sb_publishable_IbaR-DQ23P8myIDPxEE0Qw_8EC_toie")
-      ) {
+        SUPABASE_URL.includes("YOUR-PROJECT-REF") ||
+        SUPABASE_PUBLISHABLE_KEY.includes("YOUR_KEY_HERE")
+    ) {
         roomStatus.textContent = "Add Supabase URL & key in index.html first";
         roomStatus.classList.remove("connected");
         return;
