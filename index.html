@@ -169,8 +169,11 @@
     </div>
 
     <div class="controls">
-      <button id="stepOneBtn" type="button" title="Shortcut: Ctrl+Shift+H">
-        Cell 1 <span class="kbd">Ctrl+Shift+H</span>
+      <button id="rowStartBtn" type="button" title="Shortcut: Ctrl+Shift+B">
+        Row Start <span class="kbd">Ctrl+Shift+B</span>
+      </button>
+      <button id="rowEndBtn" type="button" title="Shortcut: Ctrl+Shift+E">
+        Row End <span class="kbd">Ctrl+Shift+E</span>
       </button>
       <button id="readRowBtn" type="button" title="Shortcut: Ctrl+Shift+R">
         Read Row <span class="kbd">Ctrl+Shift+R</span>
@@ -236,11 +239,12 @@
     const roomInput = document.getElementById("roomInput");
     const connectRoomBtn = document.getElementById("connectRoomBtn");
     const roomStatus = document.getElementById("roomStatus");
+    const rowStartBtn = document.getElementById("rowStartBtn");
+    const rowEndBtn = document.getElementById("rowEndBtn");
     const readRowBtn = document.getElementById("readRowBtn");
     const copyRowBtn = document.getElementById("copyRowBtn");
     const insertRightBtn = document.getElementById("insertRightBtn");
     const clearGridBtn = document.getElementById("clearGridBtn");
-    const stepOneBtn = document.getElementById("stepOneBtn");
     const rateSlider = document.getElementById("rateSlider");
     const rateValue = document.getElementById("rateValue");
 
@@ -419,8 +423,22 @@
       }
     }
 
-    function goToStepOneStart() {
-      moveTo(0, 0, true, true);
+    function goToRowStart() {
+      moveTo(activeRow, 0, true, false);
+    }
+
+    function goToRowEnd() {
+      ensureRowExists(activeRow);
+      const currentRow = rows[activeRow];
+      let lastNonEmpty = -1;
+      for (let i = currentRow.length - 1; i >= 0; i--) {
+        if (currentRow[i] !== "") {
+          lastNonEmpty = i;
+          break;
+        }
+      }
+      const targetCol = lastNonEmpty === -1 ? 0 : Math.min(NUM_COLS - 1, lastNonEmpty + 1);
+      moveTo(activeRow, targetCol, true, false);
     }
 
     function insertBlankRight() {
@@ -520,7 +538,8 @@
     }
 
     enableVoiceBtn.addEventListener("click", enableVoice);
-    stepOneBtn.addEventListener("click", goToStepOneStart);
+    rowStartBtn.addEventListener("click", goToRowStart);
+    rowEndBtn.addEventListener("click", goToRowEnd);
     insertRightBtn.addEventListener("click", insertBlankRight);
 
     // Speak each character added or removed in the Room Code text field
@@ -567,9 +586,12 @@
       if (e.code === "KeyV") {
         e.preventDefault();
         enableVoice();
-      } else if (e.code === "KeyH") {
+      } else if (e.code === "KeyB") {
         e.preventDefault();
-        goToStepOneStart();
+        goToRowStart();
+      } else if (e.code === "KeyE") {
+        e.preventDefault();
+        goToRowEnd();
       } else if (e.code === "KeyL") {
         e.preventDefault();
         focusRoomInput();
