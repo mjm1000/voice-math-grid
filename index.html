@@ -151,12 +151,7 @@
   <div class="app">
     <h1>Self-Voicing Math Grid</h1>
     <p class="hint">
-      Click <strong>Enable Voice</strong> (<span class="kbd">Ctrl+Shift+V</span>) first. Shortcuts:
-      <strong>Connect Room</strong> (<span class="kbd">Ctrl+Shift+C</span>),
-      <strong>Read Row</strong> (<span class="kbd">Ctrl+Shift+R</span>),
-      <strong>Copy Row Down</strong> (<span class="kbd">Ctrl+Shift+D</span>),
-      <strong>Add Row</strong> (<span class="kbd">Ctrl+Shift+A</span>),
-      <strong>Clear All</strong> (<span class="kbd">Ctrl+Shift+X</span>).
+      Click <strong>Enable Voice</strong> (<span class="kbd">Ctrl+Shift+V</span>) to start.
     </p>
 
     <div class="controls">
@@ -167,8 +162,8 @@
         Room Code:
         <input id="roomInput" type="text" placeholder="e.g. grade9-4821" autocomplete="off" />
       </label>
-      <button id="connectRoomBtn" type="button" title="Shortcut: Ctrl+Shift+C">
-        Connect Room <span class="kbd">Ctrl+Shift+C</span>
+      <button id="connectRoomBtn" type="button" title="Connect using this button or Enter in Room Code">
+        Connect Room
       </button>
       <span id="roomStatus" class="status">Offline (local only)</span>
     </div>
@@ -180,11 +175,8 @@
       <button id="copyRowBtn" type="button" title="Shortcut: Ctrl+Shift+D">
         Copy Row Down <span class="kbd">Ctrl+Shift+D</span>
       </button>
-      <button id="addRowBtn" type="button" title="Shortcut: Ctrl+Shift+A">
-        Add Row <span class="kbd">Ctrl+Shift+A</span>
-      </button>
-      <button id="clearGridBtn" type="button" title="Shortcut: Ctrl+Shift+X">
-        Clear All <span class="kbd">Ctrl+Shift+X</span>
+      <button id="clearGridBtn" type="button" title="Shortcut: Ctrl+Shift+C">
+        Clear All <span class="kbd">Ctrl+Shift+C</span>
       </button>
       <label>
         Speed:
@@ -239,7 +231,6 @@
     const roomStatus = document.getElementById("roomStatus");
     const readRowBtn = document.getElementById("readRowBtn");
     const copyRowBtn = document.getElementById("copyRowBtn");
-    const addRowBtn = document.getElementById("addRowBtn");
     const clearGridBtn = document.getElementById("clearGridBtn");
     const rateSlider = document.getElementById("rateSlider");
     const rateValue = document.getElementById("rateValue");
@@ -453,13 +444,6 @@
       broadcastGridChange("copy_row");
     }
 
-    function addRow() {
-      rows.push(Array(NUM_COLS).fill(""));
-      renderGrid(true);
-      speak("Row added");
-      broadcastGridChange("add_row");
-    }
-
     function clearGrid() {
       rows = Array.from({ length: NUM_ROWS }, () => Array(NUM_COLS).fill(""));
       activeRow = 0;
@@ -500,7 +484,6 @@
     });
 
     copyRowBtn.addEventListener("click", copyRowDown);
-    addRowBtn.addEventListener("click", addRow);
     clearGridBtn.addEventListener("click", clearGrid);
 
     rateSlider.addEventListener("input", () => {
@@ -509,16 +492,13 @@
       speak(`Speed ${speechRate.toFixed(1)}`);
     });
 
-    // Global Ctrl+Shift+<key> shortcuts for every button using e.code
+    // Global Ctrl+Shift+<key> shortcuts using e.code
     window.addEventListener("keydown", (e) => {
       if (!e.ctrlKey || !e.shiftKey || e.altKey || e.metaKey) return;
 
       if (e.code === "KeyV") {
         e.preventDefault();
         enableVoice();
-      } else if (e.code === "KeyC") {
-        e.preventDefault();
-        connectToRoom(roomInput.value);
       } else if (e.code === "KeyR") {
         e.preventDefault();
         readCurrentRow();
@@ -526,10 +506,7 @@
       } else if (e.code === "KeyD") {
         e.preventDefault();
         copyRowDown();
-      } else if (e.code === "KeyA") {
-        e.preventDefault();
-        addRow();
-      } else if (e.code === "KeyX") {
+      } else if (e.code === "KeyC") {
         e.preventDefault();
         clearGrid();
       }
