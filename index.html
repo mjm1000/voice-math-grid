@@ -151,17 +151,22 @@
   <div class="app">
     <h1>Self-Voicing Math Grid</h1>
     <p class="hint">
-      Click <strong>Enable Voice</strong> (<span class="kbd">Ctrl+Shift+V</span>) to start.
+      Click <strong>Enable Voice</strong> (<span class="kbd">Ctrl+Shift+V</span>) first. Shortcuts:
+      <strong>Step 1 Start</strong> (<span class="kbd">Ctrl+Shift+H</span>),
+      <strong>Room Code</strong> (<span class="kbd">Ctrl+Shift+L</span>),
+      <strong>Read Row</strong> (<span class="kbd">Ctrl+Shift+R</span>),
+      <strong>Copy Row Down</strong> (<span class="kbd">Ctrl+Shift+D</span>),
+      <strong>Clear All</strong> (<span class="kbd">Ctrl+Shift+C</span>).
     </p>
 
     <div class="controls">
       <button id="enableVoiceBtn" class="primary" type="button" title="Shortcut: Ctrl+Shift+V">
         Enable Voice <span class="kbd">Ctrl+Shift+V</span>
       </button>
-      <label>
-        Room Code:
-        <input id="roomInput" type="text" placeholder="e.g. grade9-4821" autocomplete="off" />
+      <label for="roomInput">
+        Room Code <span class="kbd">Ctrl+Shift+L</span>:
       </label>
+      <input id="roomInput" type="text" placeholder="e.g. grade9-4821" autocomplete="off" title="Shortcut: Ctrl+Shift+L" />
       <button id="connectRoomBtn" type="button" title="Connect using this button or Enter in Room Code">
         Connect Room
       </button>
@@ -177,6 +182,9 @@
       </button>
       <button id="clearGridBtn" type="button" title="Shortcut: Ctrl+Shift+C">
         Clear All <span class="kbd">Ctrl+Shift+C</span>
+      </button>
+      <button id="stepOneBtn" type="button" title="Shortcut: Ctrl+Shift+H">
+        Step 1 Start <span class="kbd">Ctrl+Shift+H</span>
       </button>
       <label>
         Speed:
@@ -232,6 +240,7 @@
     const readRowBtn = document.getElementById("readRowBtn");
     const copyRowBtn = document.getElementById("copyRowBtn");
     const clearGridBtn = document.getElementById("clearGridBtn");
+    const stepOneBtn = document.getElementById("stepOneBtn");
     const rateSlider = document.getElementById("rateSlider");
     const rateValue = document.getElementById("rateValue");
 
@@ -243,14 +252,28 @@
       window.speechSynthesis.speak(utterance);
     }
 
+    function speakSequence(items) {
+      if (!voiceEnabled || !("speechSynthesis" in window) || !items.length) return;
+      window.speechSynthesis.cancel();
+      items.forEach((item) => {
+        const utterance = new SpeechSynthesisUtterance(String(item));
+        utterance.rate = speechRate;
+        window.speechSynthesis.speak(utterance);
+      });
+    }
+
+    function tokenLabel(ch) {
+      return ch in SYMBOL_NAMES ? SYMBOL_NAMES[ch] : ch;
+    }
+
     function speakToken(ch) {
-      speak(ch in SYMBOL_NAMES ? SYMBOL_NAMES[ch] : ch);
+      speak(tokenLabel(ch));
     }
 
     function readCurrentRow() {
       const parts = rows[activeRow]
         .filter((ch) => ch !== "")
-        .map((ch) => (ch in SYMBOL_NAMES ? SYMBOL_NAMES[ch] : ch));
+        .map((ch) => tokenLabel(ch));
       speak(parts.length ? parts.join(" ") : "empty row");
     }
 
@@ -318,7 +341,7 @@
           }
           renderGrid(false);
           if (payload.reason === "cell_edit" && payload.changedValue) {
-            speak(payload.changedValue in SYMBOL_NAMES ? SYMBOL_NAMES[payload.changedValue] : payload.changedValue);
+            speak(tokenLabel(payload.changedValue));
           } else if (payload.reason === "copy_row") {
             speak("Row copied down");
           } else if (payload.reason === "clear") {
@@ -379,14 +402,23 @@
       }
     }
 
-    function moveTo(r, c, announce = true) {
+    function moveTo(r, c, announce = true, announceStep = false) {
       ensureRowExists(r);
       activeRow = Math.max(0, Math.min(rows.length - 1, r));
       activeCol = Math.max(0, Math.min(NUM_COLS - 1, c));
       renderGrid(true);
       if (announce) {
-        speakToken(rows[activeRow][activeCol]);
+        const cellVal = tokenLabel(rows[activeRow][activeCol]);
+        if (announceStep) {
+          speakSequence([`Step ${activeRow + 1}`, cellVal]);
+        } else {
+          speak(cellVal);
+        }
       }
+    }
+
+    function goToStepOneStart() {
+      moveTo(0, 0, true, true);
     }
 
     function handleKeyDown(e) {
@@ -394,19 +426,19 @@
 
       if (e.key === "ArrowRight") {
         e.preventDefault();
-        moveTo(activeRow, activeCol + 1);
+        moveTo(activeRow, activeCol + 1, true, false);
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
-        moveTo(activeRow, activeCol - 1);
+        moveTo(activeRow, activeCol - 1, true, false);
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
-        moveTo(activeRow + 1, activeCol);
+        moveTo(activeRow + 1, activeCol, true, true);
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        moveTo(activeRow - 1, activeCol);
+        moveTo(activeRow - 1, activeCol, true, true);
       } else if (e.key === "Enter") {
         e.preventDefault();
-        moveTo(activeRow + 1, 0);
+        moveTo(activeRow + 1, 0, true, true);
       } else if (e.key === "Backspace" || e.key === "Delete") {
         e.preventDefault();
         rows[activeRow][activeCol] = "";
@@ -421,6 +453,11 @@
         speakToken(ch);
         broadcastGridChange("cell_edit", ch);
       }
+    }
+
+    function focusRoomInput() {
+      roomInput.focus();
+      speak("Room code");
     }
 
     function enableVoice() {
@@ -454,6 +491,7 @@
     }
 
     enableVoiceBtn.addEventListener("click", enableVoice);
+    stepOneBtn.addEventListener("click", goToStepOneStart);
 
     // Speak each character added or removed in the Room Code text field
     roomInput.addEventListener("input", () => {
@@ -499,6 +537,12 @@
       if (e.code === "KeyV") {
         e.preventDefault();
         enableVoice();
+      } else if (e.code === "KeyH") {
+        e.preventDefault();
+        goToStepOneStart();
+      } else if (e.code === "KeyL") {
+        e.preventDefault();
+        focusRoomInput();
       } else if (e.code === "KeyR") {
         e.preventDefault();
         readCurrentRow();
