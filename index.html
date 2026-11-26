@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Voice Math Grid</title>
+  <title>Voice Math Grid (Live Room)</title>
   <style>
     :root {
       --bg: #121417;
@@ -13,6 +13,7 @@
       --border: #3a414e;
       --text: #f3f5f8;
       --muted: #aab2c0;
+      --ok: #2ea043;
     }
 
     body {
@@ -24,7 +25,7 @@
     }
 
     .app {
-      max-width: 900px;
+      max-width: 960px;
       margin: 0 auto;
     }
 
@@ -48,11 +49,20 @@
       padding: 12px;
       border-radius: 8px;
       border: 1px solid var(--border);
-      margin-bottom: 18px;
+      margin-bottom: 14px;
     }
 
-    button, label {
+    button, label, input[type="text"] {
       font-size: 0.95rem;
+    }
+
+    input[type="text"] {
+      background: #121417;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 10px;
+      width: 170px;
     }
 
     button {
@@ -71,6 +81,16 @@
     button.primary {
       background: var(--cell-active);
       border-color: #4f78f0;
+    }
+
+    .status {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-left: auto;
+    }
+
+    .status.connected {
+      color: #7ee787;
     }
 
     .grid-wrap {
@@ -115,26 +135,26 @@
       background: var(--cell-active);
       border-color: #9bb5ff;
     }
-
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip: rect(0 0 0 0);
-      white-space: nowrap;
-    }
   </style>
 </head>
 <body>
   <div class="app">
     <h1>Self-Voicing Math Grid</h1>
     <p class="hint">
-      Click <strong>Enable Voice</strong> first. Use <strong>Arrow keys</strong> to move, type characters/symbols to enter, <strong>Backspace</strong> to clear, and <strong>Enter</strong> to move down to the next row.
+      Click <strong>Enable Voice</strong> first. Enter a shared <strong>Room Code</strong> and click <strong>Connect Room</strong> to collaborate live.
     </p>
 
     <div class="controls">
       <button id="enableVoiceBtn" class="primary" type="button">Enable Voice</button>
+      <label>
+        Room Code:
+        <input id="roomInput" type="text" placeholder="e.g. grade9-4821" autocomplete="off" />
+      </label>
+      <button id="connectRoomBtn" type="button">Connect Room</button>
+      <span id="roomStatus" class="status">Offline (local only)</span>
+    </div>
+
+    <div class="controls">
       <button id="readRowBtn" type="button">Read Row</button>
       <button id="copyRowBtn" type="button">Copy Row Down</button>
       <button id="addRowBtn" type="button">Add Row</button>
@@ -147,10 +167,15 @@
     </div>
 
     <div id="grid" class="grid-wrap" aria-label="Math equation grid"></div>
-    <div id="statusLine" class="sr-only" aria-live="off"></div>
   </div>
 
+  <!-- Supabase JS v2 from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
+    // Replace these two values with your Supabase Project URL and Publishable API key
+    const SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_YOUR_KEY_HERE";
+
     const NUM_ROWS = 6;
     const NUM_COLS = 14;
 
@@ -169,14 +194,21 @@
       ".": "point"
     };
 
+    const clientId = "peer-" + Math.random().toString(36).slice(2, 10);
     let rows = Array.from({ length: NUM_ROWS }, () => Array(NUM_COLS).fill(""));
     let activeRow = 0;
     let activeCol = 0;
     let voiceEnabled = false;
     let speechRate = 1.0;
 
+    let supabaseClient = null;
+    let activeChannel = null;
+
     const gridEl = document.getElementById("grid");
     const enableVoiceBtn = document.getElementById("enableVoiceBtn");
+    const roomInput = document.getElementById("roomInput");
+    const connectRoomBtn = document.getElementById("connectRoomBtn");
+    const roomStatus = document.getElementById("roomStatus");
     const readRowBtn = document.getElementById("readRowBtn");
     const copyRowBtn = document.getElementById("copyRowBtn");
     const addRowBtn = document.getElementById("addRowBtn");
@@ -193,11 +225,7 @@
     }
 
     function speakToken(ch) {
-      if (ch in SYMBOL_NAMES) {
-        speak(SYMBOL_NAMES[ch]);
-      } else {
-        speak(ch);
-      }
+      speak(ch in SYMBOL_NAMES ? SYMBOL_NAMES[ch] : ch);
     }
 
     function readCurrentRow() {
@@ -211,6 +239,85 @@
       while (rows.length <= r) {
         rows.push(Array(NUM_COLS).fill(""));
       }
+    }
+
+    function broadcastGridChange(reason = "update", changedValue = "") {
+      if (!activeChannel) return;
+      activeChannel.send({
+        type: "broadcast",
+        event: "grid_update",
+        payload: {
+          senderId: clientId,
+          rows,
+          reason,
+          changedValue
+        }
+      });
+    }
+
+    async function connectToRoom(roomCode) {
+      const cleanRoom = roomCode.trim();
+      if (!cleanRoom) {
+        roomStatus.textContent = "Enter a room code first";
+        roomStatus.classList.remove("connected");
+        return;
+      }
+
+      if (
+        SUPABASE_URL.includes("https://tjzwrqwyyokrnceoqvau.supabase.co") ||
+        SUPABASE_PUBLISHABLE_KEY.includes("sb_publishable_IbaR-DQ23P8myIDPxEE0Qw_8EC_toie")
+      ) {
+        roomStatus.textContent = "Add Supabase URL & key in index.html first";
+        roomStatus.classList.remove("connected");
+        return;
+      }
+
+      if (!supabaseClient) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+      }
+
+      if (activeChannel) {
+        await supabaseClient.removeChannel(activeChannel);
+        activeChannel = null;
+      }
+
+      roomStatus.textContent = `Connecting to "${cleanRoom}"...`;
+      roomStatus.classList.remove("connected");
+
+      const channel = supabaseClient.channel(`math-room:${cleanRoom}`, {
+        config: { broadcast: { self: false } }
+      });
+
+      channel
+        .on("broadcast", { event: "grid_update" }, ({ payload }) => {
+          if (!payload || payload.senderId === clientId || !Array.isArray(payload.rows)) return;
+          rows = payload.rows.map((r) => Array.isArray(r) ? r.slice(0, NUM_COLS) : Array(NUM_COLS).fill(""));
+          if (activeRow >= rows.length) {
+            activeRow = Math.max(0, rows.length - 1);
+          }
+          // Re-render without stealing focus from whoever is actively navigating/typing
+          renderGrid(false);
+          if (payload.reason === "cell_edit" && payload.changedValue) {
+            speak(payload.changedValue in SYMBOL_NAMES ? SYMBOL_NAMES[payload.changedValue] : payload.changedValue);
+          } else if (payload.reason === "copy_row") {
+            speak("Row copied down");
+          } else if (payload.reason === "clear") {
+            speak("Grid cleared");
+          }
+        })
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            activeChannel = channel;
+            roomStatus.textContent = `Live in room: ${cleanRoom}`;
+            roomStatus.classList.add("connected");
+            speak(`Connected to room ${cleanRoom}`);
+            // Share current grid state upon joining
+            broadcastGridChange("sync");
+          } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            roomStatus.textContent = "Connection error — check Supabase keys";
+            roomStatus.classList.remove("connected");
+          }
+        });
     }
 
     function renderGrid(focusTarget = true) {
@@ -283,12 +390,14 @@
         rows[activeRow][activeCol] = "";
         renderGrid(true);
         speak("blank");
+        broadcastGridChange("cell_edit", "");
       } else if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1 && /[0-9a-zA-Z+\-*/=^().×÷]/.test(e.key)) {
         e.preventDefault();
         const ch = e.key;
         rows[activeRow][activeCol] = ch;
         renderGrid(true);
         speakToken(ch);
+        broadcastGridChange("cell_edit", ch);
       }
     }
 
@@ -297,6 +406,17 @@
       enableVoiceBtn.textContent = "Voice Enabled";
       moveTo(activeRow, activeCol, false);
       speak("Voice enabled");
+    });
+
+    connectRoomBtn.addEventListener("click", () => {
+      connectToRoom(roomInput.value);
+    });
+
+    roomInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        connectToRoom(roomInput.value);
+      }
     });
 
     readRowBtn.addEventListener("click", () => {
@@ -311,12 +431,14 @@
       activeRow = nextRowIndex;
       renderGrid(true);
       speak("Copied row down");
+      broadcastGridChange("copy_row");
     });
 
     addRowBtn.addEventListener("click", () => {
       rows.push(Array(NUM_COLS).fill(""));
       renderGrid(true);
       speak("Row added");
+      broadcastGridChange("add_row");
     });
 
     clearGridBtn.addEventListener("click", () => {
@@ -325,6 +447,7 @@
       activeCol = 0;
       renderGrid(true);
       speak("Cleared");
+      broadcastGridChange("clear");
     });
 
     rateSlider.addEventListener("input", () => {
