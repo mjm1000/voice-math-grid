@@ -151,7 +151,7 @@
   <div class="app">
     <h1>Self-Voicing Math Grid</h1>
     <p class="hint">
-      Click <strong>Enable Voice</strong> (<span class="kbd">Ctrl+Shift+V</span>) first.
+      Click <strong>Enable Voice</strong> (<span class="kbd">Ctrl+Shift+V</span>) first. Typing advances right automatically; press <strong>\</strong> or <strong>~</strong> for square root (<strong>√</strong>).
     </p>
 
     <div class="controls">
@@ -214,6 +214,7 @@
       "÷": "divided by",
       "=": "equals",
       "^": "to the power of",
+      "√": "square root",
       "(": "open parenthesis",
       ")": "close parenthesis",
       ".": "point"
@@ -439,6 +440,13 @@
       broadcastGridChange("insert_right", "");
     }
 
+    function normalizeTypedChar(key) {
+      if (key === "\\" || key === "~" || key === "√") {
+        return "√";
+      }
+      return key;
+    }
+
     function handleKeyDown(e) {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
 
@@ -463,10 +471,13 @@
         renderGrid(true);
         speak("blank");
         broadcastGridChange("cell_edit", "");
-      } else if (e.key.length === 1 && /[0-9a-zA-Z+\-*/=^().×÷]/.test(e.key)) {
+      } else if (e.key.length === 1 && /[0-9a-zA-Z+\-*/=^().×÷\\~√]/.test(e.key)) {
         e.preventDefault();
-        const ch = e.key;
+        const ch = normalizeTypedChar(e.key);
         rows[activeRow][activeCol] = ch;
+        if (activeCol < NUM_COLS - 1) {
+          activeCol += 1;
+        }
         renderGrid(true);
         speakToken(ch);
         broadcastGridChange("cell_edit", ch);
