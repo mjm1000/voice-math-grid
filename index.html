@@ -151,12 +151,7 @@
   <div class="app">
     <h1>Self-Voicing Math Grid</h1>
     <p class="hint">
-      Click <strong>Enable Voice</strong> (<span class="kbd">Ctrl+Shift+V</span>) first. Shortcuts:
-      <strong>Step 1 Start</strong> (<span class="kbd">Ctrl+Shift+H</span>),
-      <strong>Room Code</strong> (<span class="kbd">Ctrl+Shift+L</span>),
-      <strong>Read Row</strong> (<span class="kbd">Ctrl+Shift+R</span>),
-      <strong>Copy Row Down</strong> (<span class="kbd">Ctrl+Shift+D</span>),
-      <strong>Clear All</strong> (<span class="kbd">Ctrl+Shift+C</span>).
+      Click <strong>Enable Voice</strong> (<span class="kbd">Ctrl+Shift+V</span>) first.
     </p>
 
     <div class="controls">
@@ -174,6 +169,9 @@
     </div>
 
     <div class="controls">
+      <button id="stepOneBtn" type="button" title="Shortcut: Ctrl+Shift+H">
+        Home <span class="kbd">Ctrl+Shift+H</span>
+      </button>
       <button id="readRowBtn" type="button" title="Shortcut: Ctrl+Shift+R">
         Read Row <span class="kbd">Ctrl+Shift+R</span>
       </button>
@@ -183,14 +181,6 @@
       <button id="clearGridBtn" type="button" title="Shortcut: Ctrl+Shift+C">
         Clear All <span class="kbd">Ctrl+Shift+C</span>
       </button>
-      <button id="stepOneBtn" type="button" title="Shortcut: Ctrl+Shift+H">
-        Step 1 Start <span class="kbd">Ctrl+Shift+H</span>
-      </button>
-      <label>
-        Speed:
-        <input id="rateSlider" type="range" min="0.6" max="1.6" step="0.1" value="1.0" />
-        <span id="rateValue">1.0x</span>
-      </label>
     </div>
 
     <div id="grid" class="grid-wrap" aria-label="Math equation grid"></div>
