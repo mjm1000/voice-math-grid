@@ -25,7 +25,7 @@
     }
 
     .app {
-      max-width: 980px;
+      max-width: 1020px;
       margin: 0 auto;
     }
 
@@ -151,40 +151,40 @@
   <div class="app">
     <h1>Self-Voicing Math Grid</h1>
     <p class="hint">
-      Click <strong>Enable Voice</strong> (<span class="kbd">Alt+V</span>) first. Shortcuts:
-      <strong>Connect Room</strong> (<span class="kbd">Alt+C</span>),
-      <strong>Read Row</strong> (<span class="kbd">Alt+R</span>),
-      <strong>Copy Row Down</strong> (<span class="kbd">Alt+D</span>),
-      <strong>Add Row</strong> (<span class="kbd">Alt+A</span>),
-      <strong>Clear All</strong> (<span class="kbd">Alt+X</span>).
+      Click <strong>Enable Voice</strong> (<span class="kbd">Ctrl+Shift+V</span>) first. Shortcuts:
+      <strong>Connect Room</strong> (<span class="kbd">Ctrl+Shift+C</span>),
+      <strong>Read Row</strong> (<span class="kbd">Ctrl+Shift+R</span>),
+      <strong>Copy Row Down</strong> (<span class="kbd">Ctrl+Shift+D</span>),
+      <strong>Add Row</strong> (<span class="kbd">Ctrl+Shift+A</span>),
+      <strong>Clear All</strong> (<span class="kbd">Ctrl+Shift+X</span>).
     </p>
 
     <div class="controls">
-      <button id="enableVoiceBtn" class="primary" type="button" title="Shortcut: Alt+V">
-        Enable Voice <span class="kbd">Alt+V</span>
+      <button id="enableVoiceBtn" class="primary" type="button" title="Shortcut: Ctrl+Shift+V">
+        Enable Voice <span class="kbd">Ctrl+Shift+V</span>
       </button>
       <label>
         Room Code:
         <input id="roomInput" type="text" placeholder="e.g. grade9-4821" autocomplete="off" />
       </label>
-      <button id="connectRoomBtn" type="button" title="Shortcut: Alt+C">
-        Connect Room <span class="kbd">Alt+C</span>
+      <button id="connectRoomBtn" type="button" title="Shortcut: Ctrl+Shift+C">
+        Connect Room <span class="kbd">Ctrl+Shift+C</span>
       </button>
       <span id="roomStatus" class="status">Offline (local only)</span>
     </div>
 
     <div class="controls">
-      <button id="readRowBtn" type="button" title="Shortcut: Alt+R">
-        Read Row <span class="kbd">Alt+R</span>
+      <button id="readRowBtn" type="button" title="Shortcut: Ctrl+Shift+R">
+        Read Row <span class="kbd">Ctrl+Shift+R</span>
       </button>
-      <button id="copyRowBtn" type="button" title="Shortcut: Alt+D">
-        Copy Row Down <span class="kbd">Alt+D</span>
+      <button id="copyRowBtn" type="button" title="Shortcut: Ctrl+Shift+D">
+        Copy Row Down <span class="kbd">Ctrl+Shift+D</span>
       </button>
-      <button id="addRowBtn" type="button" title="Shortcut: Alt+A">
-        Add Row <span class="kbd">Alt+A</span>
+      <button id="addRowBtn" type="button" title="Shortcut: Ctrl+Shift+A">
+        Add Row <span class="kbd">Ctrl+Shift+A</span>
       </button>
-      <button id="clearGridBtn" type="button" title="Shortcut: Alt+X">
-        Clear All <span class="kbd">Alt+X</span>
+      <button id="clearGridBtn" type="button" title="Shortcut: Ctrl+Shift+X">
+        Clear All <span class="kbd">Ctrl+Shift+X</span>
       </button>
       <label>
         Speed:
@@ -201,10 +201,9 @@
   <script>
     // Replace these two values with your Supabase Project URL and Publishable API key
     const SUPABASE_URL = "https://tjzwrqwyyokrnceoqvau.supabase.co";
-   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_IbaR-DQ23P8myIDPxEE0Qw_8EC_toie";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_IbaR-DQ23P8myIDPxEE0Qw_8EC_toie";
 
     const NUM_ROWS = 6;
-
     const NUM_COLS = 14;
 
     const SYMBOL_NAMES = {
@@ -400,6 +399,8 @@
     }
 
     function handleKeyDown(e) {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
       if (e.key === "ArrowRight") {
         e.preventDefault();
         moveTo(activeRow, activeCol + 1);
@@ -421,7 +422,7 @@
         renderGrid(true);
         speak("blank");
         broadcastGridChange("cell_edit", "");
-      } else if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1 && /[0-9a-zA-Z+\-*/=^().×÷]/.test(e.key)) {
+      } else if (e.key.length === 1 && /[0-9a-zA-Z+\-*/=^().×÷]/.test(e.key)) {
         e.preventDefault();
         const ch = e.key;
         rows[activeRow][activeCol] = ch;
@@ -436,7 +437,7 @@
       enableVoiceBtn.textContent = "Voice Enabled";
       const kbd = document.createElement("span");
       kbd.className = "kbd";
-      kbd.textContent = "Alt+V";
+      kbd.textContent = "Ctrl+Shift+V";
       enableVoiceBtn.appendChild(kbd);
       moveTo(activeRow, activeCol, false);
       speak("Voice enabled");
@@ -483,7 +484,7 @@
     });
 
     roomInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.altKey && !e.ctrlKey && !e.metaKey) {
+      if (e.key === "Enter" && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
         e.preventDefault();
         connectToRoom(roomInput.value);
       }
@@ -508,31 +509,31 @@
       speak(`Speed ${speechRate.toFixed(1)}`);
     });
 
-    // Global Alt+<key> shortcuts for every button
-    document.addEventListener("keydown", (e) => {
-      if (!e.altKey || e.ctrlKey || e.metaKey) return;
-      const key = e.key.toLowerCase();
-      if (key === "v") {
+    // Global Ctrl+Shift+<key> shortcuts for every button using e.code
+    window.addEventListener("keydown", (e) => {
+      if (!e.ctrlKey || !e.shiftKey || e.altKey || e.metaKey) return;
+
+      if (e.code === "KeyV") {
         e.preventDefault();
         enableVoice();
-      } else if (key === "c") {
+      } else if (e.code === "KeyC") {
         e.preventDefault();
         connectToRoom(roomInput.value);
-      } else if (key === "r") {
+      } else if (e.code === "KeyR") {
         e.preventDefault();
         readCurrentRow();
         moveTo(activeRow, activeCol, false);
-      } else if (key === "d") {
+      } else if (e.code === "KeyD") {
         e.preventDefault();
         copyRowDown();
-      } else if (key === "a") {
+      } else if (e.code === "KeyA") {
         e.preventDefault();
         addRow();
-      } else if (key === "x") {
+      } else if (e.code === "KeyX") {
         e.preventDefault();
         clearGrid();
       }
-    });
+    }, true);
 
     renderGrid(false);
   </script>
