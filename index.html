@@ -178,6 +178,9 @@
       <button id="copyRowBtn" type="button" title="Shortcut: Ctrl+Shift+D">
         Copy Row Down <span class="kbd">Ctrl+Shift+D</span>
       </button>
+      <button id="insertRightBtn" type="button" title="Shortcut: Ctrl+Shift+I">
+        Insert Blank Right <span class="kbd">Ctrl+Shift+I</span>
+      </button>
       <button id="clearGridBtn" type="button" title="Shortcut: Ctrl+Shift+C">
         Clear All <span class="kbd">Ctrl+Shift+C</span>
       </button>
@@ -234,6 +237,7 @@
     const roomStatus = document.getElementById("roomStatus");
     const readRowBtn = document.getElementById("readRowBtn");
     const copyRowBtn = document.getElementById("copyRowBtn");
+    const insertRightBtn = document.getElementById("insertRightBtn");
     const clearGridBtn = document.getElementById("clearGridBtn");
     const stepOneBtn = document.getElementById("stepOneBtn");
     const rateSlider = document.getElementById("rateSlider");
@@ -339,6 +343,8 @@
             speak(tokenLabel(payload.changedValue));
           } else if (payload.reason === "copy_row") {
             speak("Row copied down");
+          } else if (payload.reason === "insert_right") {
+            speak("Blank cell inserted");
           } else if (payload.reason === "clear") {
             speak("Grid cleared");
           }
@@ -416,6 +422,23 @@
       moveTo(0, 0, true, true);
     }
 
+    function insertBlankRight() {
+      ensureRowExists(activeRow);
+      const currentRow = rows[activeRow];
+      if (activeCol >= NUM_COLS - 1) {
+        speak("At end of row");
+        return;
+      }
+      currentRow.splice(activeCol + 1, 0, "");
+      if (currentRow.length > NUM_COLS) {
+        currentRow.pop();
+      }
+      activeCol += 1;
+      renderGrid(true);
+      speakSequence(["Inserted", "blank"]);
+      broadcastGridChange("insert_right", "");
+    }
+
     function handleKeyDown(e) {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
 
@@ -487,6 +510,7 @@
 
     enableVoiceBtn.addEventListener("click", enableVoice);
     stepOneBtn.addEventListener("click", goToStepOneStart);
+    insertRightBtn.addEventListener("click", insertBlankRight);
 
     // Speak each character added or removed in the Room Code text field
     roomInput.addEventListener("input", () => {
@@ -545,6 +569,9 @@
       } else if (e.code === "KeyD") {
         e.preventDefault();
         copyRowDown();
+      } else if (e.code === "KeyI") {
+        e.preventDefault();
+        insertBlankRight();
       } else if (e.code === "KeyC") {
         e.preventDefault();
         clearGrid();
