@@ -248,20 +248,22 @@
     const rateSlider = document.getElementById("rateSlider");
     const rateValue = document.getElementById("rateValue");
 
-    function speak(text) {
+    function speak(text, pitch = 1.0) {
       if (!voiceEnabled || !("speechSynthesis" in window)) return;
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(String(text));
       utterance.rate = speechRate;
+      utterance.pitch = pitch;
       window.speechSynthesis.speak(utterance);
     }
 
-    function speakSequence(items) {
+    function speakSequence(items, pitch = 1.0) {
       if (!voiceEnabled || !("speechSynthesis" in window) || !items.length) return;
       window.speechSynthesis.cancel();
       items.forEach((item) => {
         const utterance = new SpeechSynthesisUtterance(String(item));
         utterance.rate = speechRate;
+        utterance.pitch = pitch;
         window.speechSynthesis.speak(utterance);
       });
     }
@@ -270,8 +272,8 @@
       return ch in SYMBOL_NAMES ? SYMBOL_NAMES[ch] : ch;
     }
 
-    function speakToken(ch) {
-      speak(tokenLabel(ch));
+    function speakToken(ch, pitch = 1.0) {
+      speak(tokenLabel(ch), pitch);
     }
 
     function readCurrentRow() {
@@ -346,6 +348,8 @@
           renderGrid(false);
           if (payload.reason === "cell_edit" && payload.changedValue) {
             speak(tokenLabel(payload.changedValue));
+          } else if (payload.reason === "delete_shift") {
+            speak(payload.changedValue ? tokenLabel(payload.changedValue) : "blank", 1.6);
           } else if (payload.reason === "copy_row") {
             speak("Row copied down");
           } else if (payload.reason === "insert_right") {
@@ -460,6 +464,19 @@
       broadcastGridChange("insert_right", "");
     }
 
+    function deleteAndShiftLeft() {
+      ensureRowExists(activeRow);
+      const currentRow = rows[activeRow];
+      const deletedChar = currentRow[activeCol] || "";
+      currentRow.splice(activeCol, 1);
+      while (currentRow.length < NUM_COLS) {
+        currentRow.push("");
+      }
+      renderGrid(true);
+      speakToken(deletedChar, 1.6);
+      broadcastGridChange("delete_shift", deletedChar);
+    }
+
     function normalizeTypedChar(key) {
       if (key === "\\" || key === "~" || key === "√") {
         return "√";
@@ -526,10 +543,7 @@
         moveTo(activeRow + 1, 0, true, true);
       } else if (e.key === "Backspace" || e.key === "Delete") {
         e.preventDefault();
-        rows[activeRow][activeCol] = "";
-        renderGrid(true);
-        speak("blank");
-        broadcastGridChange("cell_edit", "");
+        deleteAndShiftLeft();
       } else if (e.key.length === 1 && /[0-9a-zA-Z+\-*/=^().×÷\\~√]/.test(e.key)) {
         e.preventDefault();
         const ch = normalizeTypedChar(e.key);
@@ -600,7 +614,7 @@
         const addedChar = current.slice(lastRoomValue.length).slice(-1);
         speakToken(addedChar);
       } else if (current.length < lastRoomValue.length) {
-        speak(current.length === 0 ? "blank" : "deleted");
+        speak(current.length === 0 ? "blank" : "deleted", 1.6);
       }
       lastRoomValue = current;
     });
