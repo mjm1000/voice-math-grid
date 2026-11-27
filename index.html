@@ -349,7 +349,7 @@
           if (payload.reason === "cell_edit" && payload.changedValue) {
             speak(tokenLabel(payload.changedValue));
           } else if (payload.reason === "delete_shift") {
-            speak(payload.changedValue ? tokenLabel(payload.changedValue) : "blank", 1.7);
+            speak(payload.changedValue ? tokenLabel(payload.changedValue) : "blank", 1.6);
           } else if (payload.reason === "copy_row") {
             speak("Row copied down");
           } else if (payload.reason === "insert_right") {
@@ -476,7 +476,7 @@
         activeCol = Math.max(0, activeCol - 1);
       }
       renderGrid(true);
-      speakToken(deletedChar, 1.7);
+      speakToken(deletedChar, 1.6);
       broadcastGridChange("delete_shift", deletedChar);
     }
 
@@ -524,6 +524,34 @@
       }
 
       broadcastGridChange("paste");
+    }
+
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function formatGridForClipboard() {
+      const lines = [];
+      rows.forEach((rowData, rIdx) => {
+        const expr = rowData.filter((ch) => ch !== "").join("");
+        if (expr.length > 0) {
+          lines.push({ step: rIdx + 1, expr });
+        }
+      });
+
+      if (!lines.length) {
+        return { plain: "", html: "" };
+      }
+
+      const plain = lines.map((item) => `Step ${item.step}: ${item.expr}`).join("\n");
+      const html = lines
+        .map((item) => `<p>Step ${item.step}: ${escapeHtml(item.expr)}</p>`)
+        .join("");
+
+      return { plain, html };
     }
 
     function handleKeyDown(e) {
@@ -598,6 +626,17 @@
       broadcastGridChange("clear");
     }
 
+    // Keep each row on one line when copying from the grid into Google Docs
+    window.addEventListener("copy", (e) => {
+      if (document.activeElement === roomInput) return;
+      const { plain, html } = formatGridForClipboard();
+      if (!plain || !e.clipboardData) return;
+      e.preventDefault();
+      e.clipboardData.setData("text/plain", plain);
+      e.clipboardData.setData("text/html", html);
+      speak("Copied rows to clipboard");
+    });
+
     // Allow pasting equations directly into the current row (outside the Room Code box)
     window.addEventListener("paste", (e) => {
       if (document.activeElement === roomInput) return;
@@ -620,7 +659,7 @@
         const addedChar = current.slice(lastRoomValue.length).slice(-1);
         speakToken(addedChar);
       } else if (current.length < lastRoomValue.length) {
-        speak(current.length === 0 ? "blank" : "deleted", 1.7);
+        speak(current.length === 0 ? "blank" : "deleted", 1.6);
       }
       lastRoomValue = current;
     });
