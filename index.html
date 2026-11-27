@@ -151,7 +151,7 @@
   <div class="app">
     <h1>Self-Voicing Math Grid</h1>
     <p class="hint">
-      Click <strong>Enable Voice</strong> (<span class="kbd">Ctrl+Shift+V</span>) first. Typing advances right automatically; press <strong>\</strong> or <strong>~</strong> for square root (<strong>√</strong>).
+      Click <strong>Enable Voice</strong> (<span class="kbd">Ctrl+Shift+V</span>) first. Typing advances right automatically; press <strong>\</strong> or <strong>~</strong> for square root (<strong>√</strong>); paste (<span class="kbd">Ctrl+V</span> / <span class="kbd">Cmd+V</span>) to fill a row.
     </p>
 
     <div class="controls">
@@ -350,6 +350,8 @@
             speak("Row copied down");
           } else if (payload.reason === "insert_right") {
             speak("Blank cell inserted");
+          } else if (payload.reason === "paste") {
+            speak("Equation pasted");
           } else if (payload.reason === "clear") {
             speak("Grid cleared");
           }
@@ -465,6 +467,45 @@
       return key;
     }
 
+    function pasteTextIntoRow(rawText) {
+      if (!rawText) return;
+      ensureRowExists(activeRow);
+
+      // Take first line if multiple lines were copied, remove spaces, and keep supported math characters
+      const firstLine = rawText.split(/\r?\n/)[0].replace(/\s+/g, "");
+      const tokens = [];
+      for (const ch of firstLine) {
+        if (/[0-9a-zA-Z+\-*/=^().×÷\\~√]/.test(ch)) {
+          tokens.push(normalizeTypedChar(ch));
+        }
+      }
+
+      if (!tokens.length) {
+        speak("No valid math characters to paste");
+        return;
+      }
+
+      let col = activeCol;
+      let written = 0;
+      for (const tok of tokens) {
+        if (col >= NUM_COLS) break;
+        rows[activeRow][col] = tok;
+        col += 1;
+        written += 1;
+      }
+
+      activeCol = Math.min(NUM_COLS - 1, activeCol + written);
+      renderGrid(true);
+
+      if (written < tokens.length) {
+        speakSequence([`Pasted ${written} characters`, "row full"]);
+      } else {
+        speak(`Pasted ${written} characters`);
+      }
+
+      broadcastGridChange("paste");
+    }
+
     function handleKeyDown(e) {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
 
@@ -536,6 +577,16 @@
       speak("Cleared");
       broadcastGridChange("clear");
     }
+
+    // Allow pasting equations directly into the current row (outside the Room Code box)
+    window.addEventListener("paste", (e) => {
+      if (document.activeElement === roomInput) return;
+      const text = e.clipboardData ? e.clipboardData.getData("text/plain") : "";
+      if (text) {
+        e.preventDefault();
+        pasteTextIntoRow(text);
+      }
+    });
 
     enableVoiceBtn.addEventListener("click", enableVoice);
     rowStartBtn.addEventListener("click", goToRowStart);
