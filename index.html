@@ -464,13 +464,16 @@
       broadcastGridChange("insert_right", "");
     }
 
-    function deleteAndShiftLeft() {
+    function deleteAndShiftLeft(moveLeft = false) {
       ensureRowExists(activeRow);
       const currentRow = rows[activeRow];
       const deletedChar = currentRow[activeCol] || "";
       currentRow.splice(activeCol, 1);
       while (currentRow.length < NUM_COLS) {
         currentRow.push("");
+      }
+      if (moveLeft) {
+        activeCol = Math.max(0, activeCol - 1);
       }
       renderGrid(true);
       speakToken(deletedChar, 1.6);
@@ -541,9 +544,12 @@
       } else if (e.key === "Enter") {
         e.preventDefault();
         moveTo(activeRow + 1, 0, true, true);
-      } else if (e.key === "Backspace" || e.key === "Delete") {
+      } else if (e.key === "Backspace") {
         e.preventDefault();
-        deleteAndShiftLeft();
+        deleteAndShiftLeft(true);
+      } else if (e.key === "Delete") {
+        e.preventDefault();
+        deleteAndShiftLeft(false);
       } else if (e.key.length === 1 && /[0-9a-zA-Z+\-*/=^().×÷\\~√]/.test(e.key)) {
         e.preventDefault();
         const ch = normalizeTypedChar(e.key);
