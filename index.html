@@ -25,7 +25,7 @@
     }
 
     .app {
-      max-width: 1020px;
+      max-width: 1180px;
       margin: 0 auto;
     }
 
@@ -205,7 +205,7 @@
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_IbaR-DQ23P8myIDPxEE0Qw_8EC_toie";
 
     const NUM_ROWS = 6;
-    const NUM_COLS = 14;
+    const NUM_COLS = 20;
 
     const SYMBOL_NAMES = {
       "": "blank",
@@ -349,7 +349,7 @@
           if (payload.reason === "cell_edit" && payload.changedValue) {
             speak(tokenLabel(payload.changedValue));
           } else if (payload.reason === "delete_shift") {
-            speak(payload.changedValue ? tokenLabel(payload.changedValue) : "blank", 1.6);
+            speak(payload.changedValue ? tokenLabel(payload.changedValue) : "blank", 1.7);
           } else if (payload.reason === "copy_row") {
             speak("Row copied down");
           } else if (payload.reason === "insert_right") {
@@ -476,7 +476,7 @@
         activeCol = Math.max(0, activeCol - 1);
       }
       renderGrid(true);
-      speakToken(deletedChar, 1.6);
+      speakToken(deletedChar, 1.7);
       broadcastGridChange("delete_shift", deletedChar);
     }
 
@@ -620,7 +620,7 @@
         const addedChar = current.slice(lastRoomValue.length).slice(-1);
         speakToken(addedChar);
       } else if (current.length < lastRoomValue.length) {
-        speak(current.length === 0 ? "blank" : "deleted", 1.6);
+        speak(current.length === 0 ? "blank" : "deleted", 1.7);
       }
       lastRoomValue = current;
     });
